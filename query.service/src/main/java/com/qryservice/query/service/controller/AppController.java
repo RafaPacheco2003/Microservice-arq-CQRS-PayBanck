@@ -20,7 +20,7 @@ public class AppController {
     @Autowired
     private CuentaService cuentaService;
 
-    @GetMapping("/clientes/{id}")
+    @GetMapping("/clientes-redis/{id}")
     public Cliente obtenerClientePorId(@PathVariable Long id) {
         return clienteService.findByidCliente(id);
     }

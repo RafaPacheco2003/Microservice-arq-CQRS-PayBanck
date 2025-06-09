@@ -1,6 +1,5 @@
 package com.qryservice.query.service.mapper;
 
-import com.qryservice.query.service.dto.ClienteEvent;
 import com.qryservice.query.service.dto.ClienteResponse;
 import com.qryservice.query.service.entity.Cliente;
 import org.springframework.stereotype.Service;
