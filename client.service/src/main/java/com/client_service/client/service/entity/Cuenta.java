@@ -14,12 +14,12 @@ public class Cuenta {
     private Long idCuenta;
 
     @ManyToOne
-    @JoinColumn(name = "idCuenta", insertable = false, updatable = false)
+    @JoinColumn(name = "idCliente")  // FK en la tabla Cuenta apuntando a Cliente
     private Cliente cliente;
 
     private BigDecimal saldo;
-    private BigDecimal  deuda;
+    private BigDecimal deuda;
     private BigDecimal limiteCredito;
-    
 
+    private Boolean activo;
 }

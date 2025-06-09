@@ -1,37 +1,89 @@
 package com.client_service.client.service.service.impl;
 
 import com.client_service.client.service.dto.event.ClienteEvent;
+import com.client_service.client.service.dto.event.CuentaEvent;
 import com.client_service.client.service.dto.request.ClienteRequest;
 import com.client_service.client.service.dto.response.ClienteResponse;
+import com.client_service.client.service.dto.response.CuentaResponse;
 import com.client_service.client.service.entity.Cliente;
+import com.client_service.client.service.entity.Cuenta;
 import com.client_service.client.service.mapper.ClienteMapper;
+import com.client_service.client.service.mapper.CuentaMapper;
 import com.client_service.client.service.repository.ClienteRepository;
+import com.client_service.client.service.repository.CuentaRepository;
 import com.client_service.client.service.service.ClienteService;
+import com.client_service.client.service.util.GenerarLimiteCreditoService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.math.BigDecimal;
 import java.util.Date;
 
 
 @Service
 public class ClienteServiceImpl implements ClienteService {
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
+
+    @Autowired
+    private GenerarLimiteCreditoService generarLimiteCreditoService;;
+    @Autowired
     private ClienteRepository clienteRepository;
+    @Autowired
     private ClienteMapper clienteMapper;
+    @Autowired
     private KafkaTemplate<String, Object> kafkaTemplate;
 
+    @Autowired
+    private CuentaRepository cuentaRepository;
+    @Autowired
+    private CuentaMapper cuentaMapper;
+
+    @Override
+    public ClienteResponse getCliente(Long idCliente) {
+        Cliente cliente = clienteRepository.findById(idCliente)
+                .orElseThrow(() -> new RuntimeException("Cliente no encontrado con ID: " + idCliente));
+        return clienteMapper.toClienteResponse(cliente);
+    }
 
     @Override
     public ClienteResponse agregarCliente(ClienteRequest clienteRequest) {
-        Cliente cliente = clienteMapper.toCliente(clienteRequest);
-        cliente.setRegistro(new Date());
-        clienteRepository.save(cliente);
+        try {
+            Cliente cliente = clienteMapper.toCliente(clienteRequest);
+            cliente.setRegistro(new Date());
+            clienteRepository.save(cliente);
 
-        ClienteResponse clienteResponse = clienteMapper.toClienteResponse(cliente);
-        kafkaTemplate.send("client-event-topic", new ClienteEvent("CreateCliente",clienteResponse));
+            ClienteResponse clienteResponse = clienteMapper.toClienteResponse(cliente);
 
-        return clienteResponse;
+            Cuenta cuenta = new Cuenta();
+            cuenta.setLimiteCredito(generarLimiteCreditoService.generarLimite());
+            cuenta.setCliente(cliente);
+            cuenta.setDeuda(BigDecimal.ZERO);
+            cuenta.setSaldo(new BigDecimal(0));
+            cuenta.setActivo(true);
+            Cuenta cuentaSaved = cuentaRepository.save(cuenta);
+            CuentaResponse cuentaResponse = cuentaMapper.toCuentaResponse(cuentaSaved);
+
+            // Convertir los eventos a JSON usando ObjectMapper
+            String clienteEventJson = objectMapper.writeValueAsString(new ClienteEvent("CreateCliente", clienteResponse));
+            String cuentaEventJson = objectMapper.writeValueAsString(new CuentaEvent("CreateCuenta", cuentaResponse));
+
+            // Enviar como String a Kafka
+            kafkaTemplate.send("client-event-topic", clienteEventJson);
+            kafkaTemplate.send("account-event-topic", cuentaEventJson);
+
+            return clienteResponse;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Error al agregar cliente y enviar eventos Kafka", e);
+        }
     }
+
 
     @Override
     public ClienteResponse actualizarCliente(Long idCliente, ClienteRequest clienteRequest) {

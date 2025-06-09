@@ -4,7 +4,9 @@ import com.client_service.client.service.dto.request.ClienteRequest;
 import com.client_service.client.service.dto.response.ClienteResponse;
 import com.client_service.client.service.entity.Cliente;
 import org.modelmapper.ModelMapper;
+import org.springframework.stereotype.Service;
 
+@Service
 public class ClienteMapper {
 
     private final ModelMapper modelMapper = new ModelMapper(); // Instancia local
