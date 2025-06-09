@@ -16,7 +16,6 @@ import com.client_service.client.service.util.GenerarLimiteCreditoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.math.BigDecimal;
 import java.util.Date;
@@ -24,10 +23,6 @@ import java.util.Date;
 
 @Service
 public class ClienteServiceImpl implements ClienteService {
-
-    @Autowired
-    private ObjectMapper objectMapper;
-
 
     @Autowired
     private GenerarLimiteCreditoService generarLimiteCreditoService;;
@@ -52,38 +47,27 @@ public class ClienteServiceImpl implements ClienteService {
 
     @Override
     public ClienteResponse agregarCliente(ClienteRequest clienteRequest) {
-        try {
-            Cliente cliente = clienteMapper.toCliente(clienteRequest);
-            cliente.setRegistro(new Date());
-            clienteRepository.save(cliente);
+        Cliente cliente = clienteMapper.toCliente(clienteRequest);
+        cliente.setRegistro(new Date());
+        cliente = clienteRepository.save(cliente);
 
-            ClienteResponse clienteResponse = clienteMapper.toClienteResponse(cliente);
+        ClienteResponse clienteResponse = clienteMapper.toClienteResponse(cliente);
 
-            Cuenta cuenta = new Cuenta();
-            cuenta.setLimiteCredito(generarLimiteCreditoService.generarLimite());
-            cuenta.setCliente(cliente);
-            cuenta.setDeuda(BigDecimal.ZERO);
-            cuenta.setSaldo(new BigDecimal(0));
-            cuenta.setActivo(true);
-            Cuenta cuentaSaved = cuentaRepository.save(cuenta);
-            CuentaResponse cuentaResponse = cuentaMapper.toCuentaResponse(cuentaSaved);
+        Cuenta cuenta = new Cuenta();
+        cuenta.setLimiteCredito(generarLimiteCreditoService.generarLimite());
+        cuenta.setCliente(cliente);
+        cuenta.setDeuda(BigDecimal.ZERO);
+        cuenta.setSaldo(new BigDecimal(0));
+        cuenta.setActivo(true);
+        Cuenta cuentaSaved = cuentaRepository.save(cuenta);
+        CuentaResponse cuentaResponse = cuentaMapper.toCuentaResponse(cuentaSaved);
 
-            // Convertir los eventos a JSON usando ObjectMapper
-            String clienteEventJson = objectMapper.writeValueAsString(new ClienteEvent("CreateCliente", clienteResponse));
-            String cuentaEventJson = objectMapper.writeValueAsString(new CuentaEvent("CreateCuenta", cuentaResponse));
 
-            // Enviar como String a Kafka
-            kafkaTemplate.send("client-event-topic", clienteEventJson);
-            kafkaTemplate.send("account-event-topic", cuentaEventJson);
-
-            return clienteResponse;
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw new RuntimeException("Error al agregar cliente y enviar eventos Kafka", e);
-        }
+        System.out.println("!!SE le manada:" +clienteResponse);
+        kafkaTemplate.send("client-event-topic", new ClienteEvent("CreateCliente",clienteResponse));
+        kafkaTemplate.send("account-event-topic", new CuentaEvent("CreateCuenta",cuentaResponse));
+        return clienteResponse;
     }
-
 
     @Override
     public ClienteResponse actualizarCliente(Long idCliente, ClienteRequest clienteRequest) {
