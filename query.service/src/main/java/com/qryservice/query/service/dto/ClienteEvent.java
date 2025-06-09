@@ -13,5 +13,5 @@ import java.util.Date;
 public class ClienteEvent {
 
     private String eventType;
-    private Cliente cliente;
+    private ClienteResponse cliente;
 }

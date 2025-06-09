@@ -24,6 +24,5 @@ public class Cliente {
     private String direccion;
     private String telefono;
     private Date registro;
-    //@OneToMany(mappedBy = "cliente")
-    // private List<Cuenta> cuentas;
+
 }
