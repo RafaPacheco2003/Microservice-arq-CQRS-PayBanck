@@ -1,0 +1,19 @@
+spring:
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: client.service
+              uri: lb://client.service
+              predicates:
+                - Path=/api/client-service/**
+              filters:
+                - StripPrefix=2
+            - id: query.service
+              uri: lb://query.service
+              predicates:
+                - Path=/api/query-service/**
+              filters:
+                - StripPrefix=2
+
